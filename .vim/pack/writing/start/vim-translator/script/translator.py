@@ -49,19 +49,15 @@ class BaseTranslator(object):
         if header:
             header = copy.deepcopy(header)
         else:
-            header = {}
-            header[
-                "User-Agent"
-            ] = "Mozilla/5.0 (X11; Linux x86_64) \
-                    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
-
-        if post:
-            if data:
+            header = {
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) \\n            #                    AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36"
+            }
+        if data:
+            if post:
                 data = urlencode(data).encode("utf-8")
-        else:
-            if data:
+            else:
                 query_string = urlencode(data)
-                url = url + "?" + query_string
+                url = f"{url}?{query_string}"
                 data = None
 
         req = Request(url, data, header)
@@ -125,19 +121,19 @@ class BaseTranslator(object):
         socket.socket = socks.socksocket
 
     def test_request(self, test_url):
-        print("test url: %s" % test_url)
+        print(f"test url: {test_url}")
         print(self.request(test_url))
 
     def create_translation(self, sl="auto", tl="auto", text=""):
-        res = {}
-        res["engine"] = self._name
-        res["sl"] = sl  # 来源语言
-        res["tl"] = tl  # 目标语言
-        res["text"] = text  # 需要翻译的文本
-        res["phonetic"] = ""  # 音标
-        res["paraphrase"] = ""  # 简单释义
-        res["explains"] = []  # 分行解释
-        return res
+        return {
+            "engine": self._name,
+            "sl": sl,
+            "tl": tl,
+            "text": text,
+            "phonetic": "",
+            "paraphrase": "",
+            "explains": [],
+        }
 
     # 翻译结果：需要填充如下字段
     def translate(self, sl, tl, text):
@@ -147,12 +143,13 @@ class BaseTranslator(object):
         import hashlib
 
         m = hashlib.md5()
-        if sys.version_info[0] < 3:
-            if isinstance(text, unicode):  # noqa: F821
-                text = text.encode("utf-8")
-        else:
-            if isinstance(text, str):
-                text = text.encode("utf-8")
+        if (
+            sys.version_info[0] < 3
+            and isinstance(text, unicode)
+            or sys.version_info[0] >= 3
+            and isinstance(text, str)
+        ):  # noqa: F821
+            text = text.encode("utf-8")
         m.update(text)
         return m.hexdigest()
 
@@ -181,8 +178,7 @@ class BaicizhanTranslator(BaseTranslator):
 
     def translate(self, sl, tl, text, options=None):
         url = "http://mall.baicizhan.com/ws/search"
-        req = {}
-        req["w"] = url_quote(text)
+        req = {"w": url_quote(text)}
         resp = self.http_get(url, req, None)
         if not resp:
             return None
@@ -211,7 +207,7 @@ class BingDict(BaseTranslator):
 
     def translate(self, sl, tl, text, options=None):
         url = self._cnurl if "zh" in tl else self._url
-        url = url + "?q=" + url_quote(text)
+        url = f"{url}?q={url_quote(text)}"
         headers = {
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.5",
@@ -228,9 +224,7 @@ class BingDict(BaseTranslator):
         if not html:
             return ""
         m = re.findall(r'<span class="ht_attr" lang=".*?">\[(.*?)\] </span>', html)
-        if not m:
-            return ""
-        return self.html_unescape(m[0].strip())
+        return "" if not m else self.html_unescape(m[0].strip())
 
     def get_explains(self, html):
         if not html:
@@ -238,10 +232,7 @@ class BingDict(BaseTranslator):
         m = re.findall(
             r'<span class="ht_pos">(.*?)</span><span class="ht_trs">(.*?)</span>', html
         )
-        expls = []
-        for item in m:
-            expls.append("%s %s" % item)
-        return expls
+        return ["%s %s" % item for item in m]
 
 
 class GoogleTranslator(BaseTranslator):
@@ -253,13 +244,7 @@ class GoogleTranslator(BaseTranslator):
     def get_url(self, sl, tl, qry):
         http_host = self._cnhost if "zh" in tl else self._host
         qry = url_quote(qry)
-        url = (
-            "https://{}/translate_a/single?client=gtx&sl={}&tl={}&dt=at&dt=bd&dt=ex&"
-            "dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&q={}".format(
-                http_host, sl, tl, qry
-            )
-        )
-        return url
+        return f"https://{http_host}/translate_a/single?client=gtx&sl={sl}&tl={tl}&dt=at&dt=bd&dt=ex&dt=ld&dt=md&dt=qca&dt=rw&dt=rm&dt=ss&dt=t&q={qry}"
 
     def translate(self, sl, tl, text, options=None):
         url = self.get_url(sl, tl, text)
@@ -280,25 +265,18 @@ class GoogleTranslator(BaseTranslator):
         return res
 
     def get_phonetic(self, obj):
-        for x in obj[0]:
-            if len(x) == 4:
-                return x[3]
-        return ""
+        return next((x[3] for x in obj[0] if len(x) == 4), "")
 
     def get_paraphrase(self, obj):
-        paraphrase = ""
-        for x in obj[0]:
-            if x[0]:
-                paraphrase += x[0]
-        return paraphrase
+        return "".join(x[0] for x in obj[0] if x[0])
 
     def get_explains(self, obj):
         explains = []
         if obj[1]:
             for x in obj[1]:
-                expl = "[{}] ".format(x[0][0])
+                expl = f"[{x[0][0]}] "
                 for i in x[2]:
-                    expl += i[0] + ";"
+                    expl += f"{i[0]};"
                 explains.append(expl)
         return explains
 
@@ -307,11 +285,11 @@ class GoogleTranslator(BaseTranslator):
             return []
         result = []
         for x in resp[12]:
-            result.append("[{}]".format(x[0]))
+            result.append(f"[{x[0]}]")
             for y in x[1]:
-                result.append("- {}".format(y[0]))
+                result.append(f"- {y[0]}")
                 if len(y) >= 3:
-                    result.append("  * {}".format(y[2]))
+                    result.append(f"  * {y[2]}")
         return result
 
     def get_alternative(self, resp):
@@ -321,9 +299,7 @@ class GoogleTranslator(BaseTranslator):
         result = []
         for x in resp[5]:
             # result.append('- {}'.format(x[0]))
-            for i in x[2]:
-                if i[0] != definition:
-                    result.append(" * {}".format(i[0]))
+            result.extend(f" * {i[0]}" for i in x[2] if i[0] != definition)
         return result
 
 
@@ -333,8 +309,7 @@ class HaiciDict(BaseTranslator):
 
     def translate(self, sl, tl, text, options=None):
         url = "http://dict.cn/mini.php"
-        req = {}
-        req["q"] = url_quote(text)
+        req = {"q": url_quote(text)}
         resp = self.http_get(url, req)
         if not resp:
             return
@@ -352,8 +327,7 @@ class HaiciDict(BaseTranslator):
         m = re.findall(r'<div id="e">(.*?)</div>', html)
         explains = []
         for item in m:
-            for e in item.split("<br>"):
-                explains.append(e)
+            explains.extend(iter(item.split("<br>")))
         return explains
 
 
@@ -364,10 +338,7 @@ class ICibaTranslator(BaseTranslator):
 
     def translate(self, sl, tl, text, options=None):
         url = "http://www.iciba.com/index.php"
-        req = {}
-        req["a"] = "getWordMean"
-        req["c"] = "search"
-        req["word"] = url_quote(text)
+        req = {"a": "getWordMean", "c": "search", "word": url_quote(text)}
         resp = self.http_get(url, req, None)
         if not resp:
             return None
@@ -394,10 +365,7 @@ class ICibaTranslator(BaseTranslator):
 
     def get_explains(self, obj):
         parts = obj["parts"] if "parts" in obj else []
-        explains = []
-        for part in parts:
-            explains.append(part["part"] + ", ".join(part["means"]))
-        return explains
+        return [part["part"] + ", ".join(part["means"]) for part in parts]
 
 
 class YoudaoTranslator(BaseTranslator):
@@ -408,7 +376,7 @@ class YoudaoTranslator(BaseTranslator):
         # 备用 self.D = "n%A-rKaT5fb[Gy?;N5@Tj"
 
     def sign(self, text, salt):
-        s = "fanyideskweb" + text + salt + self.D
+        s = f"fanyideskweb{text}{salt}{self.D}"
         return self.md5sum(s)
 
     def translate(self, sl, tl, text, options=None):
@@ -448,13 +416,11 @@ class YoudaoTranslator(BaseTranslator):
 
     def get_paraphrase(self, obj):
         translation = ""
-        t = obj.get("translateResult")
-        if t:
+        if t := obj.get("translateResult"):
             for n in t:
                 part = []
                 for m in n:
-                    x = m.get("tgt")
-                    if x:
+                    if x := m.get("tgt"):
                         part.append(x)
                 if part:
                     translation += ", ".join(part)
@@ -481,7 +447,7 @@ class TranslateShell(BaseTranslator):
             options = []
 
         if self._proxy_url:
-            options.append("-proxy {}".format(self._proxy_url))
+            options.append(f"-proxy {self._proxy_url}")
 
         default_opts = [
             "-no-ansi",
@@ -489,11 +455,11 @@ class TranslateShell(BaseTranslator):
             "-show-languages n",
             "-show-prompt-message n",
             "-show-translation-phonetics n",
-            "-hl {}".format(tl),
+            f"-hl {tl}",
         ]
         options = default_opts + options
         source_lang = "" if sl == "auto" else sl
-        cmd = "trans {} {}:{} '{}'".format(" ".join(options), source_lang, tl, text)
+        cmd = f"""trans {" ".join(options)} {source_lang}:{tl} '{text}'"""
         run = os.popen(cmd)
         lines = []
         for line in run.readlines():
@@ -543,16 +509,13 @@ class SdcvShell(BaseTranslator):
             options = []
 
         if self._proxy_url:
-            options.append("-proxy {}".format(self._proxy_url))
+            options.append(f"-proxy {self._proxy_url}")
 
         source_lang = "" if sl == "auto" else sl
         dictionary = self.get_dictionary(source_lang, tl, text)
-        if dictionary == "":
-            default_opts = []
-        else:
-            default_opts = [" ".join(["-u", dictionary])]
+        default_opts = [] if dictionary == "" else [" ".join(["-u", dictionary])]
         options = default_opts + options
-        cmd = "sdcv {} '{}'".format(" ".join(options), text)
+        cmd = f"""sdcv {" ".join(options)} '{text}'"""
         run = os.popen(cmd)
         lines = []
         for line in run.readlines():
@@ -595,11 +558,7 @@ def main():
     engines = args.engines
     to_lang = args.target_lang
     from_lang = args.source_lang
-    if args.options:
-        options = args.options.split(",")
-    else:
-        options = []
-
+    options = args.options.split(",") if args.options else []
     translation = {}
     translation["text"] = text
     translation["status"] = 1

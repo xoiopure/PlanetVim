@@ -1,5 +1,5 @@
 def test_numbers():
-    assert 1 == 1
+    pass
 
 def test_foo():
     class CustomException(Exception):

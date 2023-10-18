@@ -33,11 +33,10 @@ TortoiseSVN setup:
                             help="")
 
     arg_parser.add_argument('--unity',
-                            
+
                             help="Path to unity.exe")
 
-    args = arg_parser.parse_args()
-    return args
+    return arg_parser.parse_args()
 
 def find_unity():
     """Search for Unity.exe

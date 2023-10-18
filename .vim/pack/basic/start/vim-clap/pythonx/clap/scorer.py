@@ -78,7 +78,7 @@ def compute(niddle, haystack):
     if niddle.islower():
         haystack = haystack.lower()
 
-    if n == 0 or n == m:
+    if n in [0, m]:
         return SCORE_MAX, list(range(n))
 
     D = [[0] * m for _ in range(n)]  # best score ending with `niddle[:i]`
@@ -152,7 +152,7 @@ def score(niddle, haystack):
     if niddle.islower():
         haystack = haystack.lower()
 
-    if n == 0 or n == m:
+    if n in [0, m]:
         return SCORE_MAX, list(range(n))
     D = [[0] * m for _ in range(n)]  # best score ending with `niddle[:i]`
     M = [[0] * m for _ in range(n)]  # best score for `niddle[:i]`

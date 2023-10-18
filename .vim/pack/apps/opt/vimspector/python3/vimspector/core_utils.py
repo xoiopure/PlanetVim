@@ -76,21 +76,18 @@ def override( target_dict: typing.MutableMapping,
     # Handle special ! syntax:
     #   "!keyname" : "REMOVE",   --> remove the key 'keyname' from target_dict
     #
-    if key[ 0 : 1 ] == "!" and key[ 1 : 2 ] != "!":
+    if key[:1] == "!" and key[1:2] != "!":
       key = key [ 1: ]
       if value == "REMOVE":
         target_dict.pop( key, None )
         continue
 
     current_value = target_dict.get( key )
-    if not isinstance( current_value, Mapping ):
+    if not isinstance(current_value, Mapping) or not isinstance(
+        value, Mapping):
       # Thing or Mapping overrides Thing or None
       target_dict[ key ] = value
-    elif isinstance( value, Mapping ):
+    else:
       # Mapping overrides mapping, recurse
       target_dict[ key ] = override( current_value, value )
-    else:
-      # Thing overrides Mapping
-      target_dict[ key ] = value
-
   return target_dict

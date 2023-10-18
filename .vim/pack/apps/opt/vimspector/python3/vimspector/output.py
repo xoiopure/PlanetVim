@@ -199,7 +199,6 @@ class OutputView( object ):
 
       self._buffers[ category ] = TabBuffer( out, len( self._buffers ) )
       self._buffers[ category ].is_job = True
-      self._RenderWinBar( category )
     else:
       if category == 'Console':
         name = 'vimspector.Console'
@@ -219,8 +218,7 @@ class OutputView( object ):
       else:
         utils.SetUpHiddenBuffer( tab_buffer.buf, name )
 
-      self._RenderWinBar( category )
-
+    self._RenderWinBar( category )
     self._buffers[ category ].syntax = utils.SetSyntax(
       self._buffers[ category ].syntax,
       syntax,
@@ -243,9 +241,9 @@ class OutputView( object ):
 
       try:
         if tab_buffer.flag:
-          vim.command( 'nunmenu WinBar.{}'.format( utils.Escape( category ) ) )
+          vim.command(f'nunmenu WinBar.{utils.Escape(category)}')
         else:
-          vim.command( 'nunmenu WinBar.{}*'.format( utils.Escape( category ) ) )
+          vim.command(f'nunmenu WinBar.{utils.Escape(category)}*')
       except vim.error as e:
         # E329 means the menu doesn't exist; ignore that.
         if 'E329' not in str( e ):

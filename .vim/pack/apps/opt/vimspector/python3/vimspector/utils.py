@@ -68,11 +68,7 @@ def NewEmptyBuffer():
 
 
 def WindowForBuffer( buf ):
-  for w in vim.current.tabpage.windows:
-    if w.buffer == buf:
-      return w
-
-  return None
+  return next((w for w in vim.current.tabpage.windows if w.buffer == buf), None)
 
 
 def OpenFileInCurrentWindow( file_name ):
@@ -90,8 +86,7 @@ COMMAND_HANDLERS = {}
 
 
 def OnCommandWithLogComplete( name, exit_code ):
-  cb = COMMAND_HANDLERS.get( name )
-  if cb:
+  if cb := COMMAND_HANDLERS.get(name):
     cb( exit_code )
 
 
@@ -103,19 +98,16 @@ def SetUpCommandBuffer( cmd, name, api_prefix, completion_handler = None ):
               name )
 
   if buf is None:
-    raise RuntimeError( "Unable to start job {}: {}".format( cmd, name ) )
+    raise RuntimeError(f"Unable to start job {cmd}: {name}")
   elif int( buf ) <= 0:
-    raise RuntimeError( "Unable to get all streams for job {}: {}".format(
-      name,
-      cmd ) )
+    raise RuntimeError(f"Unable to get all streams for job {name}: {cmd}")
 
   return vim.buffers[ int( buf ) ]
 
 
 def CleanUpCommand( name, api_prefix ):
-  return vim.eval( 'vimspector#internal#{}job#CleanUpCommand( "{}" )'.format(
-    api_prefix,
-    name ) )
+  return vim.eval(
+      f'vimspector#internal#{api_prefix}job#CleanUpCommand( "{name}" )')
 
 
 def CleanUpHiddenBuffer( buf ):
@@ -123,7 +115,7 @@ def CleanUpHiddenBuffer( buf ):
     return
 
   try:
-    vim.command( 'bdelete! {}'.format( buf.number ) )
+    vim.command(f'bdelete! {buf.number}')
   except vim.error as e:
     # FIXME: For now just ignore the "no buffers were deleted" error
     if 'E516' not in str( e ):
@@ -335,9 +327,9 @@ def Escape( msg ):
 
 def UserMessage( msg, persist=False, error=False ):
   if persist:
-    _logger.warning( 'User Msg: ' + msg )
+    _logger.warning(f'User Msg: {msg}')
   else:
-    _logger.info( 'User Msg: ' + msg )
+    _logger.info(f'User Msg: {msg}')
 
   cmd = 'echom' if persist else 'echo'
   vim.command( 'redraw' )
@@ -366,18 +358,15 @@ def InputSave():
 
 def SelectFromList( prompt, options, ret='label' ):
   with InputSave():
-    display_options = [ prompt ]
-    display_options.extend( [ '{0}: {1}'.format( i + 1, v )
-                              for i, v in enumerate( options ) ] )
+    display_options = [
+        prompt,
+        *['{0}: {1}'.format(i + 1, v) for i, v in enumerate(options)],
+    ]
     try:
-      selection = int( vim.eval(
-        'inputlist( ' + json.dumps( display_options ) + ' )' ) ) - 1
+      selection = (int(vim.eval(f'inputlist( {json.dumps(display_options)} )')) - 1)
       if selection < 0 or selection >= len( options ):
         return None
-      if ret == 'index':
-        return selection
-      else:
-        return options[ selection ]
+      return selection if ret == 'index' else options[ selection ]
     except ( KeyboardInterrupt, vim.error ):
       return None
 
@@ -498,9 +487,8 @@ def ExpandReferencesInObject( obj, mapping, calculus, user_choices ):
 
     for i, _ in enumerate( obj_copy ):
       j = i + j_offset
-      if ( isinstance( obj_copy[ i ], str ) and
-           len( obj_copy[ i ] ) > 2 and
-           obj_copy[ i ][ 0:2 ] == '*$' ):
+      if (isinstance(obj_copy[i], str) and len(obj_copy[i]) > 2
+          and obj_copy[i][:2] == '*$'):
         # *${something} - expand list in place
         value = ExpandReferencesInString( obj_copy[ i ][ 1: ],
                                           mapping,
@@ -604,14 +592,9 @@ def ExpandReferencesInString( orig_s,
           try:
             default_value = _Substitute( e.default_value, mapping )
           except MissingSubstitution as e2:
-            if e2.name in calculus:
-              default_value = calculus[ e2.name ]()
-            else:
-              default_value = e.default_value
-
-        mapping[ key ] = AskForInput( 'Enter value for {}: '.format( key ),
-                                      default_value,
-                                      'file' )
+            default_value = (calculus[e2.name]()
+                             if e2.name in calculus else e.default_value)
+        mapping[ key ] = AskForInput(f'Enter value for {key}: ', default_value, 'file')
 
         if mapping[ key ] is None:
           raise KeyboardInterrupt
@@ -623,8 +606,7 @@ def ExpandReferencesInString( orig_s,
                        orig_s,
                        mapping[ key ] )
     except ValueError as e:
-      UserMessage( 'Invalid $ in string {}: {}'.format( s, e ),
-                   persist = True )
+      UserMessage(f'Invalid $ in string {s}: {e}', persist = True)
       break
 
   return s
@@ -637,11 +619,11 @@ def CoerceType( mapping: typing.Dict[ str, typing.Any ], key: str ):
   }
 
   parts = key.split( '#' )
-  if len( parts ) > 1 and parts[ -1 ] in DICT_TYPES.keys():
+  if len(parts) > 1 and parts[-1] in DICT_TYPES:
     value = mapping.pop( key )
 
     new_type = parts[ -1 ]
-    key = '#'.join( parts[ 0 : -1 ] )
+    key = '#'.join(parts[:-1])
 
     mapping[ key ] = DICT_TYPES[ new_type ]( value )
 
@@ -672,33 +654,31 @@ def ParseVariables( variables_list,
     new_mapping.update( new_variables )
     for n, v in list( variables.items() ):
       if isinstance( v, dict ):
-        if 'shell' in v:
-          new_v = v.copy()
-          # Bit of a hack. Allows environment variables to be used.
-          ExpandReferencesInDict( new_v,
-                                  new_mapping,
-                                  calculus,
-                                  user_choices )
+        if 'shell' not in v:
+          raise ValueError(f"Unsupported variable defn {n}: Missing 'shell'")
+        new_v = v.copy()
+        # Bit of a hack. Allows environment variables to be used.
+        ExpandReferencesInDict( new_v,
+                                new_mapping,
+                                calculus,
+                                user_choices )
 
-          env = os.environ.copy()
-          env.update( new_v.get( 'env' ) or {} )
-          cmd = new_v[ 'shell' ]
-          if not isinstance( cmd, list ):
-            cmd = shlex.split( cmd )
+        env = os.environ.copy()
+        env.update( new_v.get( 'env' ) or {} )
+        cmd = new_v[ 'shell' ]
+        if not isinstance( cmd, list ):
+          cmd = shlex.split( cmd )
 
-          new_variables[ n ] = subprocess.check_output(
-            cmd,
-            cwd = new_v.get( 'cwd' ) or os.getcwd(),
-            env = env ).decode( 'utf-8' ).strip()
+        new_variables[ n ] = subprocess.check_output(
+          cmd,
+          cwd = new_v.get( 'cwd' ) or os.getcwd(),
+          env = env ).decode( 'utf-8' ).strip()
 
-          _logger.debug( "Set new_variables[ %s ] to '%s' from %s from %s",
-                         n,
-                         new_variables[ n ],
-                         new_v,
-                         v )
-        else:
-          raise ValueError(
-            "Unsupported variable defn {}: Missing 'shell'".format( n ) )
+        _logger.debug( "Set new_variables[ %s ] to '%s' from %s from %s",
+                       n,
+                       new_variables[ n ],
+                       new_v,
+                       v )
       else:
         new_variables[ n ] = ExpandReferencesInObject( v,
                                                        new_mapping,
@@ -711,38 +691,30 @@ def ParseVariables( variables_list,
 
 
 def CreateTooltip( display: list, is_hover = False ):
-  created_win_id = int( vim.eval(
-    "vimspector#internal#balloon#CreateTooltip({}, {})".format(
-      int( is_hover ), json.dumps( display )
-    )
-  ) )
-
-  return created_win_id
+  return int(
+      vim.eval(
+          f"vimspector#internal#balloon#CreateTooltip({int(is_hover)}, {json.dumps(display)})"
+      ))
 
 
 def GetBufferFilepath( buf ):
-  if not buf.name:
-    return ''
-
-  return os.path.normpath( buf.name )
+  return '' if not buf.name else os.path.normpath( buf.name )
 
 
 def ToUnicode( b ):
-  if isinstance( b, bytes ):
-    return b.decode( 'utf-8' )
-  return b
+  return b.decode( 'utf-8' ) if isinstance( b, bytes ) else b
 
 
 # Call a vimscript function with supplied arguments.
 def Call( vimscript_function, *args ):
-  call = vimscript_function + '('
+  call = f'{vimscript_function}('
   for index, arg in enumerate( args ):
     if index > 0:
       call += ', '
 
-    arg_name = 'vimspector_internal_arg_{}'.format( index )
+    arg_name = f'vimspector_internal_arg_{index}'
     vim.vars[ arg_name ] = arg
-    call += 'g:' + arg_name
+    call += f'g:{arg_name}'
 
   call += ')'
   return vim.eval( call )
@@ -821,9 +793,7 @@ def GetVimValue( vim_dict, name, default=None ):
   except ( KeyError, vim.error ):
     return default
 
-  if isinstance( value, bytes ):
-    return value.decode( 'utf-8' )
-  return value
+  return value.decode( 'utf-8' ) if isinstance( value, bytes ) else value
 
 
 def GetVimList( vim_dict, name, default=None ):

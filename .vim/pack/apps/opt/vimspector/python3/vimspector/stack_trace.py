@@ -349,8 +349,7 @@ class StackTraceView( object ):
     self._DrawThreads()
 
   def SetCurrentThread( self ):
-    thread = self._GetSelectedThread()
-    if thread:
+    if thread := self._GetSelectedThread():
       self._SetCurrentThread( thread )
     elif vim.current.buffer != self._buf:
       return
@@ -362,9 +361,7 @@ class StackTraceView( object ):
       utils.UserMessage( "No thread selected" )
 
   def ExpandFrameOrThread( self ):
-    thread = self._GetSelectedThread()
-
-    if thread:
+    if thread := self._GetSelectedThread():
       if thread.IsExpanded():
         thread.Collapse()
         self._DrawThreads()
@@ -389,12 +386,11 @@ class StackTraceView( object ):
       if not thread.stacktrace:
         return
 
-      frame_idx = None
-      for index, frame in enumerate( thread.stacktrace ):
-        if frame == self._current_frame:
-          frame_idx = index
-          break
-
+      frame_idx = next(
+          (index for index, frame in enumerate(thread.stacktrace)
+           if frame == self._current_frame),
+          None,
+      )
       if frame_idx is not None:
         target_idx = frame_idx + delta
         if target_idx >= 0 and target_idx < len( thread.stacktrace ):
@@ -404,35 +400,28 @@ class StackTraceView( object ):
 
 
   def UpFrame( self ):
-    frame = self._GetFrameOffset( 1 )
-    if not frame:
-      utils.UserMessage( 'Top of stack' )
-    else:
+    if frame := self._GetFrameOffset(1):
       self._JumpToFrame( frame, 'up' )
+    else:
+      utils.UserMessage( 'Top of stack' )
 
 
   def DownFrame( self ):
-    frame = self._GetFrameOffset( -1 )
-    if not frame:
-      utils.UserMessage( 'Bottom of stack' )
-    else:
+    if frame := self._GetFrameOffset(-1):
       self._JumpToFrame( frame, 'down' )
+    else:
+      utils.UserMessage( 'Bottom of stack' )
 
 
   def JumpToProgramCounter( self ):
-    frame = self._GetFrameOffset( 0 )
-    if not frame:
-      utils.UserMessage( 'No current stack frame' )
-    else:
+    if frame := self._GetFrameOffset(0):
       self._JumpToFrame( frame, 'jump' )
+    else:
+      utils.UserMessage( 'No current stack frame' )
 
 
   def AnyThreadsRunning( self ):
-    for thread in self._threads:
-      if thread.state != Thread.TERMINATED:
-        return True
-
-    return False
+    return any(thread.state != Thread.TERMINATED for thread in self._threads)
 
 
   def _JumpToFrame( self, frame, reason = '' ):
@@ -545,11 +534,7 @@ class StackTraceView( object ):
       self._current_frame_sign_id = 2
 
     for frame in thread.stacktrace:
-      if frame.get( 'source' ):
-        source = frame[ 'source' ]
-      else:
-        source = { 'name': '<unknown>' }
-
+      source = frame['source'] if frame.get('source') else {'name': '<unknown>'}
       if 'name' not in source:
         source[ 'name' ] = os.path.basename( source.get( 'path', 'unknown' ) )
 

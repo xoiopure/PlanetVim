@@ -55,14 +55,12 @@ class Source(Base):
         else:
             include = 'func,type'
 
-        command = [bin_path, '-mode', 'decls', '-include', include,
-                   '-' + mode, target]
+        command = [bin_path, '-mode', 'decls', '-include', include, f'-{mode}', target]
 
         try:
             cmd = subprocess.run(command, stdout=subprocess.PIPE, check=True)
         except subprocess.CalledProcessError as err:
-            denite.util.error(self.vim,
-                              'command returned invalid response: ' + str(err))
+            denite.util.error(self.vim, f'command returned invalid response: {str(err)}')
             return []
 
         txt = cmd.stdout.decode('utf-8')
@@ -76,6 +74,7 @@ class Source(Base):
                 'action__line': row['line'],
                 'action__col': row['col'],
                 }
+
         return list(map(make_candidates, output['decls']))
 
     def highlight(self):

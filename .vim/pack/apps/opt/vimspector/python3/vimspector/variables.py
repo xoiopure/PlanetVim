@@ -472,8 +472,7 @@ class VariablesView( object ):
     if variable is None:
       return ''
 
-    hover = variable.HoverText()
-    if hover:
+    if hover := variable.HoverText():
       utils.CreateTooltip( hover.split( '\n' ), is_hover )
 
     return ''
@@ -562,10 +561,7 @@ class VariablesView( object ):
     else:
       return none
 
-    if line_num not in view.lines:
-      return none
-
-    return view.lines[ line_num ], view
+    return none if line_num not in view.lines else (view.lines[ line_num ], view)
 
   def ExpandVariable( self, buf = None, line_num = None ):
     variable, view = self._GetVariable( buf, line_num )
@@ -654,10 +650,7 @@ class VariablesView( object ):
   def GetMemoryReference( self ):
     # Get a memoryReference for use in a ReadMemory request
     variable, _ = self._GetVariable( None, None )
-    if variable is None:
-      return None
-
-    return variable.MemoryReference()
+    return None if variable is None else variable.MemoryReference()
 
 
   def _DrawVariables( self, view, variables, indent_len, is_short = False ):
@@ -681,11 +674,7 @@ class VariablesView( object ):
         text = f'{indent}{icon} {name}: {value}'
       elif settings.Get( 'variables_display_mode' ) == 'compact':
         value = variable.variable.get( 'value', '<unknown>' ).splitlines()
-        if len( value ) > 0:
-          value = value[ 0 ]
-        else:
-          value = ''
-
+        value = value[ 0 ] if len( value ) > 0 else ''
         text = f'{indent}{marker}{icon} {name}: {value}'
       else:
         text = f'{indent}{marker}{icon} {name} ({kind}): {value}'
@@ -767,11 +756,7 @@ class VariablesView( object ):
 
     if settings.Get( 'variables_display_mode' ) == 'compact':
       value = value.splitlines()
-      if len( value ) > 0:
-        value = value[ 0 ]
-      else:
-        value = ''
-
+      value = value[ 0 ] if len( value ) > 0 else ''
     line = f'{indent}{marker}{icon}{leader}{value}'
 
     line = utils.AppendToBuffer( view.buf, line.split( '\n' ) )
@@ -791,7 +776,7 @@ class VariablesView( object ):
 
       # Find the variable in parent
       found = False
-      for index, v in enumerate( parent.variables ):
+      for v in parent.variables:
         if v.variable[ 'name' ] == variable_body[ 'name' ]:
           variable = v
           found = True

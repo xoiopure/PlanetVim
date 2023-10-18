@@ -13,11 +13,7 @@ def LaunchTerminal( api_prefix,
                     params,
                     window_for_start,
                     existing_term ):
-  if not existing_term:
-    term = Terminal()
-  else:
-    term = existing_term
-
+  term = Terminal() if not existing_term else existing_term
   cwd = params[ 'cwd' ] or os.getcwd()
   args = params[ 'args' ] or []
   env = params.get( 'env' ) or {}
@@ -77,10 +73,11 @@ def LaunchTerminal( api_prefix,
   if term.window is not None and term.window.valid:
     assert term.buffer_number
     window_for_start = term.window
-    if ( term.window.buffer.number == term.buffer_number
-         and int( utils.Call( 'vimspector#internal#{}term#IsFinished'.format(
-                                api_prefix ),
-                              term.buffer_number ) ) ):
+    if term.window.buffer.number == term.buffer_number and int(
+        utils.Call(
+            f'vimspector#internal#{api_prefix}term#IsFinished',
+            term.buffer_number,
+        )):
       term_options[ 'curwin' ] = 1
     else:
       term_options[ 'vertical' ] = 0
@@ -110,10 +107,8 @@ def LaunchTerminal( api_prefix,
 
 
     buffer_number = int(
-      utils.Call(
-        'vimspector#internal#{}term#Start'.format( api_prefix ),
-        args,
-        term_options ) )
+        utils.Call(f'vimspector#internal#{api_prefix}term#Start', args,
+                   term_options))
     terminal_window = vim.current.window
 
   if buffer_number is None or buffer_number <= 0:

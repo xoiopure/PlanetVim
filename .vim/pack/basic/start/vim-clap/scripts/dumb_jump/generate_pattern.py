@@ -27,8 +27,7 @@ rules = {}
 for idx in range(start_idx, len(lines)):
     if lines[idx + 1].strip().startswith(';;'):
         continue
-    t = re.search(type_pattern, lines[idx])
-    if t:
+    if t := re.search(type_pattern, lines[idx]):
         regex = lines[idx + 1].split()[1][1:-1]
 
         regex = regex.replace('\\\\', "\\")

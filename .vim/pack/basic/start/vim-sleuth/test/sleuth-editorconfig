@@ -16,7 +16,7 @@ import json
 
 def main():
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    plugin_file = root_dir + "/plugin/sleuth.vim"
+    plugin_file = f"{root_dir}/plugin/sleuth.vim"
 
     opts, args = getopt.getopt(sys.argv[1:], "f:bv", ["version"])
     config = '.editorconfig'
@@ -30,19 +30,18 @@ def main():
             sys.exit(1)
         elif o in ("-v", "--version"):
             version = re.search(r'" Version: +([0-9.]+)', open(plugin_file).read())[1]
-            print("EditorConfig sleuth.vim v" + version + " - Specification Version 0.14.0")
+            print(f"EditorConfig sleuth.vim v{version} - Specification Version 0.14.0")
             sys.exit(0)
 
-    expr = "call('<SNR>1_DetectEditorConfig', " + json.dumps([args[0], config]) + ")[0]"
+    expr = f"call('<SNR>1_DetectEditorConfig', {json.dumps([args[0], config])})[0]"
     cmd = [os.getenv('VIM_EXE') or 'vim', '-nNes', '-u', 'NONE', '-U', 'NONE', '-i', 'NONE', '-S', plugin_file]
     (tempfd, tempname) = tempfile.mkstemp()
     try:
         os.close(tempfd)
-        cmd += ['-c', 'call writefile([json_encode(' + expr + ')], "' + tempname + '")|q']
+        cmd += ['-c', f'call writefile([json_encode({expr})], "{tempname}")|q']
         subprocess.run(cmd)
-        tempio = open(tempname, 'r')
-        pairs = json.loads(tempio.read())
-        tempio.close()
+        with open(tempname, 'r') as tempio:
+            pairs = json.loads(tempio.read())
     finally:
         os.remove(tempname)
 
@@ -57,8 +56,7 @@ def main():
     elif 'indent_size' not in pairs and pairs.get('indent_style', '') == 'tab':
         pairs['indent_size'] = pairs.get('tab_width', 'tab')
 
-    items = list(pairs.items())
-    items.sort()
+    items = sorted(pairs.items())
     for (k, v) in items:
         print(f'{k}={v}')
 

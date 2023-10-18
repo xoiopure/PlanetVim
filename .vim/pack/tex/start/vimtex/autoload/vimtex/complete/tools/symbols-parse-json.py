@@ -1,4 +1,5 @@
 """Blahrg."""
+
 import json
 
 
@@ -10,5 +11,4 @@ with open('symbols.json') as fin:
                     if (v['symbol'] is not None
                             and len(k) > 3
                             and len(v['symbol']) == 1):
-                        fout.write(
-                            k[1:] + ' ' + v['symbol'] + "\n")
+                        fout.write(f'{k[1:]} ' + v['symbol'] + "\n")

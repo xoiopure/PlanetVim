@@ -72,11 +72,8 @@ def FindExecutable( executable: str, paths=None ):
   if not paths:
     paths = GetPATHAsList()
 
-  if install.GetOS() == 'windows':
-    extensions = [ '.exe', '.bat', '.cmd' ]
-  else:
-    extensions = [ '' ]
-
+  extensions = (['.exe', '.bat', '.cmd']
+                if install.GetOS() == 'windows' else [''])
   for extension in extensions:
     if executable.endswith( extension ):
       candidate = executable
@@ -123,11 +120,8 @@ def PathToAnyWorkingPython3():
                    'python' ]
 
   for candidate in candidates:
-    try:
+    with contextlib.suppress(MissingExecutable):
       return FindExecutable( candidate, paths=paths )
-    except MissingExecutable:
-      pass
-
   raise RuntimeError( "Unable to find a working python3" )
 
 
@@ -161,7 +155,7 @@ def RunInstaller( api_prefix, leave_open, *args, **kwargs ):
     '--quiet',
     '--update-gadget-config',
   ]
-  if not vimspector_base_dir == vimspector_home:
+  if vimspector_base_dir != vimspector_home:
     cmd.extend( [ '--basedir', vimspector_base_dir ] )
   cmd.extend( args )
 
@@ -267,11 +261,9 @@ class Manifest:
     self.Read()
 
   def Read( self ):
-    try:
+    with contextlib.suppress(OSError):
       with open( install.GetManifestFile( options.vimspector_base ), 'r' ) as f:
         self.manifest = json.load( f )
-    except OSError:
-      pass
 
   def Write( self ):
     with open( install.GetManifestFile( options.vimspector_base ), 'w' ) as f:
@@ -279,10 +271,8 @@ class Manifest:
 
 
   def Clear( self, name: str ):
-    try:
+    with contextlib.suppress(KeyError):
       del self.manifest[ name ]
-    except KeyError:
-      pass
 
 
   def Update( self, name: str,  gadget_spec: dict ):
@@ -297,29 +287,23 @@ class Manifest:
       return True
 
     # If anything changed in the spec, update
-    if not current_spec == gadget_spec:
+    if current_spec != gadget_spec:
       return True
 
     # Always update if the version string is 'master'. Probably a git repo
     # that pulls master (which tbh we shouldn't have)
     if current_spec.get( 'version' ) in ( 'master', '' ):
       return True
-    if current_spec.get( 'repo', {} ).get( 'ref' ) == 'master':
-      return True
-
-    return False
+    return current_spec.get( 'repo', {} ).get( 'ref' ) == 'master'
 
 
 def ReadAdapters( read_existing = True ):
   all_adapters = {}
   if read_existing:
-    try:
+    with contextlib.suppress(OSError):
       with open( install.GetGadgetConfigFile( options.vimspector_base ),
                  'r' ) as f:
         all_adapters = json.load( f ).get( 'adapters', {} )
-    except OSError:
-      pass
-
   # Include "built-in" adapter for multi-session mode
   all_adapters.update( {
     'multi-session': {
@@ -393,7 +377,7 @@ def InstallBashDebug( name, root, gadget ):
 
 def InstallDebugpy( name, root, gadget ):
   wd = os.getcwd()
-  root = os.path.join( root, 'debugpy-{}'.format( gadget[ 'version' ] ) )
+  root = os.path.join(root, f"debugpy-{gadget['version']}")
   os.chdir( root )
   try:
     CheckCall( [ sys.executable,
@@ -430,7 +414,7 @@ def InstallTclProDebug( name, root, gadget ):
     #    '/Current',
     for p in [ '/usr/local/opt/tcl-tk/lib', '/opt/homebrew/opt/tcl-tk/lib' ]:
       if os.path.exists( os.path.join( p, 'tclConfig.sh' ) ):
-        configure.append( '--with-tcl=' + p )
+        configure.append(f'--with-tcl={p}')
         break
 
 
@@ -593,7 +577,7 @@ def MakeExecutable( file_path ):
     Print( f"WARNING: Missing executable: { file_path }" )
     return
 
-  Print( 'Making executable: {}'.format( file_path ) )
+  Print(f'Making executable: {file_path}')
   os.chmod( file_path, 0o755 )
 
 
@@ -638,18 +622,17 @@ def DownloadFileTo( url,
   if os.path.exists( file_path ):
     if checksum:
       if ValidateCheckSumSHA256( file_path, checksum ):
-        Print( "Checksum matches for {}, using it".format( file_path ) )
+        Print(f"Checksum matches for {file_path}, using it")
         return file_path
       else:
-        Print( "Checksum doesn't match for {}, removing it".format(
-          file_path ) )
+        Print(f"Checksum doesn't match for {file_path}, removing it")
 
-    Print( "Removing existing {}".format( file_path ) )
+    Print(f"Removing existing {file_path}")
     os.remove( file_path )
 
   r = request.Request( url, headers = { 'User-Agent': 'Vimspector' } )
 
-  Print( "Downloading {} to {}/{}".format( url, destination, file_name ) )
+  Print(f"Downloading {url} to {destination}/{file_name}")
 
   if not check_certificate:
     context = ssl.create_default_context()
@@ -666,13 +649,10 @@ def DownloadFileTo( url,
   if checksum:
     if not ValidateCheckSumSHA256( file_path, checksum ):
       raise RuntimeError(
-        'Checksum for {} ({}) does not match expected {}'.format(
-          file_path,
-          GetChecksumSHA254( file_path ),
-          checksum ) )
+          f'Checksum for {file_path} ({GetChecksumSHA254(file_path)}) does not match expected {checksum}'
+      )
   else:
-    Print( "Checksum for {}: {}".format( file_path,
-                                         GetChecksumSHA254( file_path ) ) )
+    Print(f"Checksum for {file_path}: {GetChecksumSHA254(file_path)}")
 
   return file_path
 
@@ -688,13 +668,10 @@ def ValidateCheckSumSHA256( file_path, checksum ):
 
 
 def RemoveIfExists( destination ):
-  try:
+  with contextlib.suppress(OSError):
     os.remove( destination )
     Print( "Removed file {}".format( destination ) )
     return
-  except OSError:
-    pass
-
   N = 1
 
 
@@ -737,20 +714,10 @@ class ModePreservingZipFile( zipfile.ZipFile ):
 
 
 def ExtractZipTo( file_path, destination, format ):
-  Print( "Extracting {} to {}".format( file_path, destination ) )
+  Print(f"Extracting {file_path} to {destination}")
   RemoveIfExists( destination )
 
-  if format == 'zip':
-    with ModePreservingZipFile( file_path ) as f:
-      f.extractall( path = destination )
-  elif format == 'zip.gz':
-    with gzip.open( file_path, 'rb' ) as f:
-      file_contents = f.read()
-
-    with ModePreservingZipFile( io.BytesIO( file_contents ) ) as f:
-      f.extractall( path = destination )
-
-  elif format == 'tar':
+  if format == 'tar':
     try:
       with tarfile.open( file_path ) as f:
         f.extractall( path = destination )
@@ -760,6 +727,16 @@ def ExtractZipTo( file_path, destination, format ):
       os.makedirs( destination )
       with CurrentWorkingDir( destination ):
         CheckCall( [ 'tar', 'zxvf', file_path ] )
+
+  elif format == 'zip':
+    with ModePreservingZipFile( file_path ) as f:
+      f.extractall( path = destination )
+  elif format == 'zip.gz':
+    with gzip.open( file_path, 'rb' ) as f:
+      file_contents = f.read()
+
+    with ModePreservingZipFile( io.BytesIO( file_contents ) ) as f:
+      f.extractall( path = destination )
 
 
 def MakeExtensionSymlink( name, root, extension_path = 'extension' ):
@@ -798,11 +775,7 @@ def CloneRepoTo( url, ref, destination ):
 
 
 def AbortIfSUperUser( force_sudo ):
-  # TODO: We should probably check the effective uid too
-  is_su = False
-  if 'SUDO_COMMAND' in os.environ:
-    is_su = True
-
+  is_su = 'SUDO_COMMAND' in os.environ
   if is_su:
     if force_sudo:
       print( "*** RUNNING AS SUPER USER DUE TO force_sudo! "
