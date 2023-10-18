@@ -33,7 +33,7 @@ def DefineSign( name, text, double_text, texthl, col = 'right', **kwargs ):
 
   if col == 'right':
     if int( utils.Call( 'strdisplaywidth', text ) ) < 2:
-      text = ' ' + text
+      text = f' {text}'
 
   text = text.replace( ' ', r'\ ' )
 

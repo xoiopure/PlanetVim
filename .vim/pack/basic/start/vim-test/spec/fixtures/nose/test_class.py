@@ -1,18 +1,18 @@
 class TestNumbers:
     def test_numbers(self):
-        assert 1 == 1
+        pass
 
 class TestSubclass(Subclass):
     def test_subclass(self):
-        assert 1 == 1
+        pass
 
 class Test_underscores_and_123(Subclass):
     def test_underscores(self):
-        assert 1 == 1
+        pass
 
 class UnittestClass(unittest.TestCase):
     def test_unittest(self):
-        assert 1 == 1
+        pass
 
 class SomeTest(TestCase):
     def test_foo(self):

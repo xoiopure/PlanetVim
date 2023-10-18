@@ -24,10 +24,7 @@ class TestExpandReferencesInDict( unittest.TestCase ):
     }
 
     def AskForInput( prompt, default_value = None, completion = None ):
-      if default_value is not None:
-        return default_value
-
-      return 'typed text'
+      return default_value if default_value is not None else 'typed text'
 
     d = {
       'dollar': '$$',

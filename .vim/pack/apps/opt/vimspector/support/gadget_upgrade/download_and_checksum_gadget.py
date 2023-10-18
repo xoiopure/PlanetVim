@@ -20,12 +20,9 @@ gadgets_to_sum = sys.argv[ 1: ]
 results = []
 
 for gadget_name in gadgets.GADGETS.keys():
-  include = False
-  for requested_gadget in gadgets_to_sum:
-    if fnmatch.fnmatch( gadget_name, requested_gadget ):
-      include = True
-      break
-
+  include = any(
+      fnmatch.fnmatch(gadget_name, requested_gadget)
+      for requested_gadget in gadgets_to_sum)
   if not include:
     continue
 
@@ -40,12 +37,12 @@ for gadget_name in gadgets.GADGETS.keys():
                        'download' )
 
   last_url = ''
-  for OS in 'linux', 'macos', 'windows':
-    for PLATFORM in 'x86_64', 'x86', 'arm64':
+  for OS in ('linux', 'macos', 'windows'):
+    for PLATFORM in ('x86_64', 'x86', 'arm64'):
       spec = {}
       spec.update( gadget.get( 'all', {} ) )
       spec.update( gadget.get( OS, {} ) )
-      spec.update( gadget.get( OS + '_' + PLATFORM, {} ) )
+      spec.update(gadget.get(f'{OS}_{PLATFORM}', {}))
 
       if spec.get( 'checksum', None ):
         print( f"WARNING: { PLATFORM } for { OS } for { gadget_name } "

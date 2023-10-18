@@ -1,17 +1,17 @@
 class TestNumbers:
     def test_numbers(self):
-        assert 1 == 1
+        pass
 
 class TestSubclass(TestCase):
     def test_numbers(self):
-        assert 1 == 1
+        pass
 
 class Test_underscores_and_123(TestCase):
     def test_underscores(self):
-        assert 1 == 1
+        pass
 
 class TestNestedClass:
     def test_nested(self):
+
         class NestedClass:
             ...
-        assert 1 == 1

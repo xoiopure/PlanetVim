@@ -21,8 +21,9 @@ with open('extension_map.json', 'r') as f:
 
     joined_tuples = ','.join(
         map(lambda kv: '("%s", \'%s\')' % (kv[0], kv[1]), sorted_dict.items()))
-    lines.append('pub static EXTENSION_ICON_TABLE: &[(&str, char)] = &[%s];' %
-                 joined_tuples)
+    lines.append(
+        f'pub static EXTENSION_ICON_TABLE: &[(&str, char)] = &[{joined_tuples}];'
+    )
 
 with open('exactmatch_map.json', 'r') as f:
     disordered = json.load(f)
@@ -30,8 +31,9 @@ with open('exactmatch_map.json', 'r') as f:
 
     joined_tuples = ','.join(
         map(lambda kv: '("%s", \'%s\')' % (kv[0], kv[1]), sorted_dict.items()))
-    lines.append('pub static EXACTMATCH_ICON_TABLE: &[(&str, char)] = &[%s];' %
-                 joined_tuples)
+    lines.append(
+        f'pub static EXACTMATCH_ICON_TABLE: &[(&str, char)] = &[{joined_tuples}];'
+    )
 
 with open('tagkind_map.json', 'r') as f:
     disordered = json.load(f)
@@ -39,8 +41,9 @@ with open('tagkind_map.json', 'r') as f:
 
     joined_tuples = ','.join(
         map(lambda kv: '("%s", \'%s\')' % (kv[0], kv[1]), sorted_dict.items()))
-    lines.append('pub static TAGKIND_ICON_TABLE: &[(&str, char)] = &[%s];' %
-                 joined_tuples)
+    lines.append(
+        f'pub static TAGKIND_ICON_TABLE: &[(&str, char)] = &[{joined_tuples}];'
+    )
 
 lines.append('''
 pub fn bsearch_icon_table(c: &str, table: &[(&str, char)]) ->Option<usize> {

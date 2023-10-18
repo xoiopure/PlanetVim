@@ -30,7 +30,7 @@ def _JumpToBreakpoint( bp ):
 
   try:
     if not success:
-      vim.command( "leftabove split {}".format( bp[ 'filename' ] ) )
+      vim.command(f"leftabove split {bp['filename']}")
 
     utils.SetCursorPosInWindow( vim.current.window, bp[ 'lnum' ], 1 )
   except vim.error:
@@ -136,7 +136,7 @@ class BreakpointsView( object ):
       return
 
     with utils.LetCurrentTabpage( self._win.tabpage ):
-      vim.command( "{}close".format( self._win.number ) )
+      vim.command(f"{self._win.number}close")
       self._win = None
 
   def GetBreakpointForLine( self ):
@@ -273,11 +273,7 @@ class ProjectBreakpoints( object ):
         else:
           disabled += 1
 
-    if enabled > disabled:
-      new_state = 'DISABLED'
-    else:
-      new_state = 'ENABLED'
-
+    new_state = 'DISABLED' if enabled > disabled else 'ENABLED'
     for filename, bps in self._line_breakpoints.items():
       for bp in bps:
         bp[ 'state' ] = new_state
@@ -306,12 +302,8 @@ class ProjectBreakpoints( object ):
     sorted_bps = sorted( bps,
                          key=operator.itemgetter( 'lnum' ),
                          reverse=reverse )
-    bp = next( ( bp
-                 for bp in sorted_bps
-                 if comparator( bp[ 'lnum' ], line ) ),
-                None )
-
-    if bp:
+    if bp := next((bp for bp in sorted_bps if comparator(bp['lnum'], line)),
+                  None):
       _JumpToBreakpoint( bp )
 
   def JumpToPreviousBreakpoint( self ):
@@ -347,27 +339,28 @@ class ProjectBreakpoints( object ):
           state = bp[ 'state' ]
           valid = 1
 
-        qf.append( {
-          'filename': file_name,
-          'lnum': line,
-          'col': 1,
-          'type': 'L',
-          'valid': valid,
-          'text': "Line breakpoint - {}: {}".format(
-            state,
-            json.dumps( bp[ 'options' ] ) )
-        } )
-    for bp in self._func_breakpoints:
-      qf.append( {
-        'filename': bp[ 'function' ],
+        qf.append({
+            'filename':
+            file_name,
+            'lnum':
+            line,
+            'col':
+            1,
+            'type':
+            'L',
+            'valid':
+            valid,
+            'text':
+            f"Line breakpoint - {state}: {json.dumps(bp['options'])}",
+        })
+    qf.extend({
+        'filename': bp['function'],
         'lnum': 1,
         'col': 1,
         'type': 'F',
         'valid': 0,
-        'text': "{}: Function breakpoint - {}".format( bp[ 'function' ],
-                                                       bp[ 'options' ] ),
-      } )
-
+        'text': f"{bp['function']}: Function breakpoint - {bp['options']}",
+    } for bp in self._func_breakpoints)
     return qf
 
 
@@ -407,7 +400,7 @@ class ProjectBreakpoints( object ):
       return None
 
     for filepath, breakpoint_list in self._line_breakpoints.items():
-      for index, bp in enumerate( breakpoint_list ):
+      for bp in breakpoint_list:
         server_bp = bp.get( 'server_bp', {} )
         if 'id' in server_bp and server_bp[ 'id' ] == breakpoint_id:
           return bp
@@ -588,10 +581,9 @@ class ProjectBreakpoints( object ):
   def ClearTemporaryBreakpoints( self ):
     to_delete = []
     for file_name, breakpoints in self._line_breakpoints.items():
-      for index, bp in enumerate( breakpoints ):
-        if bp[ 'options' ].get( 'temporary' ):
-          to_delete.append( ( bp, file_name, index ) )
-
+      to_delete.extend((bp, file_name, index)
+                       for index, bp in enumerate(breakpoints)
+                       if bp['options'].get('temporary'))
     for entry in to_delete:
       self._DeleteLineBreakpoint( *entry )
 
@@ -714,7 +706,7 @@ class ProjectBreakpoints( object ):
 
         dap_bp = {}
         dap_bp.update( bp[ 'options' ] )
-        dap_bp.update( { 'line': bp[ 'line' ] } )
+        dap_bp['line'] = bp[ 'line' ]
 
         dap_bp.pop( 'temporary', None )
 
@@ -756,7 +748,7 @@ class ProjectBreakpoints( object ):
           continue
         dap_bp = {}
         dap_bp.update( bp[ 'options' ] )
-        dap_bp.update( { 'name': bp[ 'function' ] } )
+        dap_bp['name'] = bp[ 'function' ]
         breakpoints.append( dap_bp )
 
       # FIXME(Ben): The function breakpoints response actually returns
@@ -824,10 +816,9 @@ class ProjectBreakpoints( object ):
                 f"'{result}'. Must be boolean, 'Y', 'N' or '' (default)" )
           else:
             result = utils.AskForInput(
-              "{}: Break on {} (Y/N/default: {})? ".format( f[ 'filter' ],
-                                                            f[ 'label' ],
-                                                            default_value ),
-              default_value )
+                f"{f['filter']}: Break on {f['label']} (Y/N/default: {default_value})? ",
+                default_value,
+            )
 
           if result == 'Y':
             exception_filters.append( f[ 'filter' ] )

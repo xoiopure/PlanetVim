@@ -71,8 +71,7 @@ class DebugAdapterConnection( object ):
 
     # TODO/FIXME: This is so messy
     expiry_id = vim.eval(
-      'timer_start( {}, "vimspector#internal#channel#Timeout" )'.format(
-        timeout ) )
+        f'timer_start( {timeout}, "vimspector#internal#channel#Timeout" )')
 
     request = PendingRequest( msg,
                               handler,
@@ -114,12 +113,11 @@ class DebugAdapterConnection( object ):
 
 
   def OnRequestTimeout( self, timer_id ):
-    request_id = None
-    for seq, request in self._outstanding_requests.items():
-      if request.expiry_id == timer_id:
-        request_id = seq
-        break
-
+    request_id = next(
+        (seq for seq, request in self._outstanding_requests.items()
+         if request.expiry_id == timer_id),
+        None,
+    )
     # Avoid modifying _outstanding_requests while looping
     if request_id is not None:
       request = self._outstanding_requests.pop( request_id )
@@ -129,12 +127,13 @@ class DebugAdapterConnection( object ):
     this_id = self._next_message_id
     self._next_message_id += 1
 
-    msg = {}
-    msg[ 'seq' ] = this_id
-    msg[ 'type' ] = 'response'
-    msg[ 'request_seq' ] = request[ 'seq' ]
-    msg[ 'command' ] = request[ 'command' ]
-    msg[ 'body' ] = response
+    msg = {
+        'seq': this_id,
+        'type': 'response',
+        'request_seq': request['seq'],
+        'command': request['command'],
+        'body': response,
+    }
     if error:
       msg[ 'success' ] = False
       msg[ 'message' ] = error
@@ -152,15 +151,12 @@ class DebugAdapterConnection( object ):
       self._AbortRequest( request, 'Closing down' )
 
   def _AbortRequest( self, request, reason ):
-    self._logger.debug( '{}: Aborting request {}'.format( reason,
-                                                          request.msg ) )
+    self._logger.debug(f'{reason}: Aborting request {request.msg}')
     _KillTimer( request )
     if request.failure_handler:
       request.failure_handler( reason, {} )
     else:
-      utils.UserMessage( 'Request for {} aborted: {}'.format(
-        request.msg[ 'command' ],
-        reason ) )
+      utils.UserMessage(f"Request for {request.msg['command']} aborted: {reason}")
 
 
   def OnData( self, data ):
@@ -273,9 +269,9 @@ class DebugAdapterConnection( object ):
         # Sigh. It looks like the ms python debug adapter sends duplicate
         # initialize responses.
         utils.UserMessage(
-          "Protocol error: duplicate response for request {}".format(
-            message[ 'request_seq' ] ) )
-        self._logger.exception( 'Duplicate response: {}'.format( message ) )
+            f"Protocol error: duplicate response for request {message['request_seq']}"
+        )
+        self._logger.exception(f'Duplicate response: {message}')
         return
 
       _KillTimer( request )
@@ -285,8 +281,7 @@ class DebugAdapterConnection( object ):
           request.handler( message )
       else:
         reason = message.get( 'message' )
-        error = message.get( 'body', {} ).get( 'error', {} )
-        if error:
+        if error := message.get('body', {}).get('error', {}):
           try:
             fmt = error[ 'format' ]
             variables = error.get( 'variables', {} )
@@ -318,5 +313,5 @@ class DebugAdapterConnection( object ):
 
 def _KillTimer( request ):
   if request.expiry_id is not None:
-    vim.eval( 'timer_stop( {} )'.format( request.expiry_id ) )
+    vim.eval(f'timer_stop( {request.expiry_id} )')
     request.expiry_id = None

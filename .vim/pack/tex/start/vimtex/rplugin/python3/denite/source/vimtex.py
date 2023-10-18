@@ -13,7 +13,7 @@ class Source(Base):
 
     @staticmethod
     def format_number(n):
-        if not n or not type(n) is dict or n['frontmatter'] or n['backmatter']:
+        if not n or type(n) is not dict or n['frontmatter'] or n['backmatter']:
             return ''
 
         num = [str(n[k]) for k in [
@@ -27,8 +27,7 @@ class Source(Base):
         if n['appendix']:
             num[0] = chr(int(num[0]) + 64)
 
-        fnum = '.'.join(num)
-        return fnum
+        return '.'.join(num)
 
     @staticmethod
     def create_candidate(e, depth):
@@ -42,5 +41,5 @@ class Source(Base):
 
     def gather_candidates(self, context):
         entries = self.vim.eval('vimtex#parser#toc()')
-        depth = max([int(e['level']) for e in entries])
+        depth = max(int(e['level']) for e in entries)
         return [Source.create_candidate(e, depth) for e in entries]

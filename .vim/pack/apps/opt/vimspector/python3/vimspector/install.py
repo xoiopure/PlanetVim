@@ -53,7 +53,7 @@ def GetPlatform():
 
 @memoize
 def GetOSPlatform():
-  return GetOS() + '_' + GetPlatform()
+  return f'{GetOS()}_{GetPlatform()}'
 
 
 def mkdirs( p ):

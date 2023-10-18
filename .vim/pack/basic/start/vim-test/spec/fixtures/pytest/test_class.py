@@ -1,19 +1,19 @@
 class TestClass:
     class TestNestedClass:
         def test_nestedclass_method(self):
-            assert 2 == 2
+            pass
 
     def test_method(self):
-        assert 1 == 1
+        pass
 
 
 def test_function():
-    assert 1 == 1
+    pass
 
 
 class TestClass2:
     def test_something(self):
-        assert 1 == 1
+        pass
 
     def test_something_else(self):
-        assert True
+        pass

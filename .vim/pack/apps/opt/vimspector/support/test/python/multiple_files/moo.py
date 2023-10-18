@@ -2,10 +2,10 @@ import cow
 
 
 def Moo():
-  for i in range( 1, 100 ):
+  for _ in range( 1, 100 ):
     cow.Say( 'Moo' )
 
-  for i in range( 1, 100 ):
+  for _ in range( 1, 100 ):
     cow.Say( 'Ooom' )
 
 

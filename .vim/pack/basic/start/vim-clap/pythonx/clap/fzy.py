@@ -8,10 +8,7 @@ from clap.scorer import fzy_scorer, substr_scorer
 def str2bool(v):
     #  For neovim, vim.eval("a:enable_icon") is str
     #  For vim, vim.eval("a:enable_icon") is bool
-    if isinstance(v, bool):
-        return v
-    else:
-        return v.lower() in ("yes", "true", "t", "1")
+    return v if isinstance(v, bool) else v.lower() in ("yes", "true", "t", "1")
 
 
 def apply_score(scorer, query, candidates, enable_icon):
@@ -19,10 +16,7 @@ def apply_score(scorer, query, candidates, enable_icon):
 
     for c in candidates:
         #  Skip two chars
-        if enable_icon:
-            candidate = c[2:]
-        else:
-            candidate = c
+        candidate = c[2:] if enable_icon else c
         score, indices = scorer(query, candidate)
         if score != float("-inf"):
             if enable_icon:
@@ -33,11 +27,7 @@ def apply_score(scorer, query, candidates, enable_icon):
 
 
 def fuzzy_match_py(query, candidates, enable_icon):
-    if ' ' in query:
-        scorer = substr_scorer
-    else:
-        scorer = fzy_scorer
-
+    scorer = substr_scorer if ' ' in query else fzy_scorer
     scored = apply_score(scorer, query, candidates, enable_icon)
     ranked = sorted(scored, key=lambda x: x['score'], reverse=True)
 

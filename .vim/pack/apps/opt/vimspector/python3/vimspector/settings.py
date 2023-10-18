@@ -115,21 +115,16 @@ def List( option: str ):
 # make a deep copy to antive str type here.
 # Of course in neovim, it's totally different and you actually get a dict type
 # back (though for once, neovim is making life somewhat easier for a change).
-DICT_TYPE = dict
-if hasattr( vim, 'Dictionary' ):
-  DICT_TYPE = vim.Dictionary
-
-LIST_TYPE = list
-if hasattr( vim, 'List' ):
-  LIST_TYPE = vim.List
+DICT_TYPE = vim.Dictionary if hasattr( vim, 'Dictionary' ) else dict
+LIST_TYPE = vim.List if hasattr( vim, 'List' ) else list
 
 
 def _IsDict( o ):
-  return isinstance( o, DICT_TYPE ) or isinstance( o, dict )
+  return isinstance(o, (DICT_TYPE, dict))
 
 
 def _IsList( o ):
-  return isinstance( o, LIST_TYPE ) or isinstance( o, list )
+  return isinstance(o, (LIST_TYPE, list))
 
 
 def Dict( option ):
@@ -147,9 +142,7 @@ def ObjectNoBytes( o ):
   elif _IsDict( o ):
     o = DictNoBytes( o )
   elif _IsList( o ):
-    new_o = []
-    for i in o:
-      new_o.append( ObjectNoBytes( i ) )
+    new_o = [ObjectNoBytes( i ) for i in o]
     o = new_o
   return o
 

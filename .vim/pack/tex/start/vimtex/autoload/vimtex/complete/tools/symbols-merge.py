@@ -12,14 +12,14 @@ def merge(filename):
     changed = False
     lines = []
     with open(filename) as f:
-        for line in f.readlines():
+        for line in f:
             parts = line.strip().split()
             if len(parts) > 0:
                 command = parts[0]
                 symbol = D.get(command, '')
                 if symbol:
                     changed = True
-                    symbol = ' ' + symbol
+                    symbol = f' {symbol}'
                 lines.append(command + symbol + "\n")
 
     if changed:

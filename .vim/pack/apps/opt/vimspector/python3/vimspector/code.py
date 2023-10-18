@@ -145,8 +145,8 @@ class CodeView( object ):
       utils.OpenFileInCurrentWindow( frame[ 'source' ][ 'path' ] )
       vim.command( 'doautocmd <nomodeline> User VimspectorJumpedToFrame' )
     except vim.error:
-      self._logger.exception( 'Unexpected vim error opening file {}'.format(
-        frame[ 'source' ][ 'path' ] ) )
+      self._logger.exception(
+          f"Unexpected vim error opening file {frame['source']['path']}")
       return False
 
     # SIC: column is 0-based, line is 1-based in vim. Why? Nobody knows.

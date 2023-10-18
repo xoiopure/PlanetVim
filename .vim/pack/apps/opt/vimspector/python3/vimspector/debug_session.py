@@ -54,7 +54,7 @@ class DebugSession( object ):
     self._render_emitter = utils.EventEmitter()
 
     self._logger.info( "**** INITIALISING NEW VIMSPECTOR SESSION ****" )
-    self._logger.info( "API is: {}".format( api_prefix ) )
+    self._logger.info(f"API is: {api_prefix}")
     self._logger.info( 'VIMSPECTOR_HOME = %s', VIMSPECTOR_HOME )
     self._logger.info( 'gadgetDir = %s',
                        install.GetGadgetDir( VIMSPECTOR_HOME ) )
@@ -305,14 +305,10 @@ class DebugSession( object ):
     # ${execPath} - the path to the running VS Code executable
 
     def relpath( p, relative_to ):
-      if not p:
-        return ''
-      return os.path.relpath( p, relative_to )
+      return '' if not p else os.path.relpath( p, relative_to )
 
     def splitext( p ):
-      if not p:
-        return [ '', '' ]
-      return os.path.splitext( p )
+      return [ '', '' ] if not p else os.path.splitext( p )
 
     variables = {
       'dollar': '$', # HACK. Hote '$$' also works.
@@ -607,12 +603,8 @@ class DebugSession( object ):
     session_file_name = settings.Get( 'session_file_name' )
     current_file = utils.GetBufferFilepath( vim.current.buffer )
 
-    # Search from the path of the file we're editing. But note that if we invent
-    # a file, we always use CWD as that's more like what would be expected.
-    file_path = utils.PathToConfigFile( session_file_name,
-                                        os.path.dirname( current_file ) )
-
-    if file_path:
+    if file_path := utils.PathToConfigFile(session_file_name,
+                                           os.path.dirname(current_file)):
       return file_path
 
     if invent_one_if_not_found:
@@ -761,14 +753,17 @@ class DebugSession( object ):
     def handler( msg ):
       self._codeView.ShowMemory( memoryReference, length, offset, msg )
 
-    self._connection.DoRequest( handler, {
-      'command': 'readMemory',
-      'arguments': {
-        'memoryReference': memoryReference,
-        'count': int( length ),
-        'offset': int( offset )
-      }
-    } )
+    self._connection.DoRequest(
+        handler,
+        {
+            'command': 'readMemory',
+            'arguments': {
+                'memoryReference': memoryReference,
+                'count': length,
+                'offset': offset,
+            },
+        },
+    )
 
 
   @IfConnected()
@@ -889,7 +884,7 @@ class DebugSession( object ):
       start = prev_non_keyword_char - 1
       if 'start' in candidate and 'length' in candidate:
         start = candidate[ 'start' ]
-      items.append( ArgLead[ 0 : start ] + label )
+      items.append(ArgLead[:start] + label)
 
     return items
 
@@ -1164,9 +1159,9 @@ class DebugSession( object ):
           self._codeView._window,
           self._adapter_term )
 
-    if not vim.eval( "vimspector#internal#{}#StartDebugSession( "
-                     "  g:_vimspector_adapter_spec "
-                     ")".format( self._connection_type ) ):
+    if not vim.eval(
+        f"vimspector#internal#{self._connection_type}#StartDebugSession(   g:_vimspector_adapter_spec )"
+    ):
       self._logger.error( "Unable to start debug server" )
       self._splash_screen = utils.DisplaySplash(
         self._api_prefix,
@@ -1197,12 +1192,12 @@ class DebugSession( object ):
                                   spec )
 
       self._connection = debug_adapter_connection.DebugAdapterConnection(
-        handlers,
-        lambda msg: utils.Call(
-          "vimspector#internal#{}#Send".format( self._connection_type ),
-          msg ),
-        self._adapter.get( 'sync_timeout' ),
-        self._adapter.get( 'async_timeout' ) )
+          handlers,
+          lambda msg: utils.Call(
+              f"vimspector#internal#{self._connection_type}#Send", msg),
+          self._adapter.get('sync_timeout'),
+          self._adapter.get('async_timeout'),
+      )
 
     self._logger.info( 'Debug Adapter Started' )
     return True
@@ -1344,7 +1339,7 @@ class DebugSession( object ):
       remote_exec_cmd = self._GetRemoteExecCommand( remote )
       commands = self._GetCommands( remote, 'run' )
 
-      for index, command in enumerate( commands ):
+      for command in commands:
         cmd = remote_exec_cmd + command[ : ]
         full_cmd = []
         for item in cmd:
@@ -1382,9 +1377,7 @@ class DebugSession( object ):
     return ssh
 
   def _GetDockerCommand( self, remote ):
-    docker = [ 'docker', 'exec' ]
-    docker.append( remote[ 'container' ] )
-    return docker
+    return ['docker', 'exec', remote['container']]
 
   def _GetRemoteExecCommand( self, remote ):
     is_ssh_cmd = any( key in remote for key in [ 'ssh',
@@ -1400,14 +1393,14 @@ class DebugSession( object ):
 
 
   def _GetCommands( self, remote, pfx ):
-    commands = remote.get( pfx + 'Commands', None )
+    commands = remote.get(f'{pfx}Commands', None)
 
     if isinstance( commands, list ):
       return commands
     elif commands is not None:
       raise ValueError( "Invalid commands; must be list" )
 
-    command = remote[ pfx + 'Command' ]
+    command = remote[f'{pfx}Command']
 
     if isinstance( command, str ):
       command = shlex.split( command )
@@ -1416,7 +1409,7 @@ class DebugSession( object ):
       raise ValueError( "Invalid command; must be list/string" )
 
     if not command:
-      raise ValueError( 'Could not determine commands for ' + pfx )
+      raise ValueError(f'Could not determine commands for {pfx}')
 
     return [ command ]
 
@@ -1466,9 +1459,7 @@ class DebugSession( object ):
 
 
   def OnFailure( self, reason, request, message ):
-    msg = "Request for '{}' failed: {}\nResponse: {}".format( request,
-                                                              reason,
-                                                              message )
+    msg = f"Request for '{request}' failed: {reason}\nResponse: {message}"
     self._outputView.Print( 'server', msg )
 
 
@@ -1656,9 +1647,10 @@ class DebugSession( object ):
     term_id = self._codeView.LaunchTerminal( params )
 
     response = {
-      'processId': int( utils.Call(
-        'vimspector#internal#{}term#GetPID'.format( self._api_prefix ),
-        term_id ) )
+        'processId':
+        int(
+            utils.Call(f'vimspector#internal#{self._api_prefix}term#GetPID',
+                       term_id))
     }
 
     self._connection.DoResponse( message, None, response )
@@ -1675,14 +1667,13 @@ class DebugSession( object ):
 
 
   def OnEvent_exited( self, message ):
-    utils.UserMessage( 'The debuggee exited with status code: {}'.format(
-      message[ 'body' ][ 'exitCode' ] ) )
+    utils.UserMessage(
+        f"The debuggee exited with status code: {message['body']['exitCode']}")
     self._stackTraceView.OnExited( message )
     self._codeView.SetCurrentFrame( None )
 
   def OnEvent_process( self, message ):
-    utils.UserMessage( 'The debuggee was started: {}'.format(
-      message[ 'body' ][ 'name' ] ) )
+    utils.UserMessage(f"The debuggee was started: {message['body']['name']}")
 
   def OnEvent_module( self, message ):
     pass
@@ -1731,13 +1722,9 @@ class DebugSession( object ):
     description = event.get( 'description' )
     text = event.get( 'text' )
 
-    if description:
-      explanation = description + '(' + reason + ')'
-    else:
-      explanation = reason
-
+    explanation = f'{description}({reason})' if description else reason
     if text:
-      explanation += ': ' + text
+      explanation += f': {text}'
 
     msg = 'Paused in thread {0} due to {1}'.format(
       event.get( 'threadId', '<unknown>' ),
@@ -1852,22 +1839,19 @@ class DebugSession( object ):
 
 def PathsToAllGadgetConfigs( vimspector_base, current_file ):
   yield install.GetGadgetConfigFile( vimspector_base )
-  for p in sorted( glob.glob(
-    os.path.join( install.GetGadgetConfigDir( vimspector_base ),
-                  '*.json' ) ) ):
-    yield p
-
+  yield from sorted(
+      glob.glob(
+          os.path.join(install.GetGadgetConfigDir(vimspector_base), '*.json')))
   yield utils.PathToConfigFile( '.gadgets.json',
                                 os.path.dirname( current_file ) )
 
 
 def PathsToAllConfigFiles( vimspector_base, current_file, filetypes ):
   for ft in filetypes + [ '_all' ]:
-    for p in sorted( glob.glob(
-      os.path.join( install.GetConfigDirForFiletype( vimspector_base, ft ),
-                    '*.json' ) ) ):
-      yield p
-
+    yield from sorted(
+        glob.glob(
+            os.path.join(install.GetConfigDirForFiletype(vimspector_base, ft),
+                         '*.json')))
   for ft in filetypes:
     yield utils.PathToConfigFile( f'.vimspector.{ft}.json',
                                   os.path.dirname( current_file ) )

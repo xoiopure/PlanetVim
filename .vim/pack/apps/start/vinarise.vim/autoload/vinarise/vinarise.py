@@ -40,9 +40,7 @@ class VinariseBuffer(object):  # pylint: disable=too-many-public-methods
         self.file = open(path, 'rb')
         self.path = path
         self.fsize = os.path.getsize(self.path)
-        mmap_max = 0
-        if self.fsize > 1000000000:
-            mmap_max = 1000000000
+        mmap_max = 1000000000 if self.fsize > 1000000000 else 0
         self._mmap(self.file.fileno(), mmap_max)
 
     def open_bytes(self, length):
@@ -67,15 +65,13 @@ class VinariseBuffer(object):  # pylint: disable=too-many-public-methods
     def write(self, path):
         if path == self.path:
             # Close current file temporary.
-            string = self.mmap[0:]
+            string = self.mmap[:]
             self.close()
         else:
             string = self.mmap
 
-        write_file = open(path, 'wb')
-        write_file.write(string)
-        write_file.close()
-
+        with open(path, 'wb') as write_file:
+            write_file.write(string)
         if path == self.path:
             # Re open file.
             self.open(path)
@@ -143,10 +139,7 @@ class VinariseBuffer(object):  # pylint: disable=too-many-public-methods
             string = unicode(string, from_enc, 'replace')
         pattern = re.compile(string.encode(to_enc, 'replace'))
         match = pattern.search(self.mmap, int(address))
-        if match is None:
-            return -1
-        else:
-            return match.start()
+        return -1 if match is None else match.start()
 
     def find_binary(self, address, binary):
         addr = int(address)
@@ -202,10 +195,10 @@ class VinariseBuffer(object):  # pylint: disable=too-many-public-methods
         self.is_mmap = False
 
     def insert_bytes(self, addr, bs):
-        bs = bytes([chr_wrap(int(x)) for x in bs])
-        mm = self.mmap[0:]
+        bs = bytes(chr_wrap(int(x)) for x in bs)
+        mm = self.mmap[:]
         self.update_bytes(mm[:int(addr)] + bs + mm[int(addr):])
 
     def delete_byte(self, addr):
-        mm = self.mmap[0:]
+        mm = self.mmap[:]
         self.update_bytes(mm[:int(addr)] + mm[int(addr)+1:])

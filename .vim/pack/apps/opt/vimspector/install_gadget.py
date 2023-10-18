@@ -124,25 +124,25 @@ for name, gadget in gadgets.GADGETS.items():
     done_languages.add( lang )
     if not gadget.get( 'enabled', True ):
       parser.add_argument(
-        '--force-enable-' + lang,
-        action = 'store_true',
-        help = 'Install the unsupported {} debug adapter for {} support'.format(
-          name,
-          lang ) )
+          f'--force-enable-{lang}',
+          action='store_true',
+          help=
+          f'Install the unsupported {name} debug adapter for {lang} support',
+      )
       continue
 
     parser.add_argument(
-      '--enable-' + lang,
-      action = 'store_true',
-      help = 'Install the {} debug adapter for {} support'.format(
-        name,
-        lang ) )
+        f'--enable-{lang}',
+        action='store_true',
+        help=f'Install the {name} debug adapter for {lang} support',
+    )
 
     parser.add_argument(
-      '--disable-' + lang,
-      action = 'store_true',
-      help = "Don't install the {} debug adapter for {} support "
-             '(when supplying --all)'.format( name, lang ) )
+        f'--disable-{lang}',
+        action='store_true',
+        help=
+        f"Don't install the {name} debug adapter for {lang} support (when supplying --all)",
+    )
 
 parser.add_argument(
     "--no-check-certificate",
@@ -190,18 +190,15 @@ for name, gadget in gadgets.GADGETS.items():
     langs = [ langs ]
   skip = 0
   for lang in langs:
-    if not gadget.get( 'enabled', True ):
-      if ( not args.force_all
-           and not getattr( args, 'force_enable_' +  lang ) ):
+    if gadget.get( 'enabled', True ):
+      if not args.all and not getattr(args, f'enable_{lang}'):
         skip = skip + 1
         continue
-    else:
-      if not args.all and not getattr( args, 'enable_' + lang ):
+      if getattr(args, f'disable_{lang}'):
         skip = skip + 1
         continue
-      if getattr( args, 'disable_' + lang ):
-        skip = skip + 1
-        continue
+    elif not args.force_all and not getattr(args, f'force_enable_{lang}'):
+      skip = skip + 1
   if skip == len( langs ):
     continue
 
@@ -238,9 +235,9 @@ manifest.Write()
 
 if args.basedir:
   print( "" )
-  print( "***NOTE***: You set --basedir to " + args.basedir +
-         ". Therefore you _must_ ensure this is in your vimrc:\n"
-         "let g:vimspector_base_dir='" + vimspector_base + "'" )
+  print((((f"***NOTE***: You set --basedir to {args.basedir}" +
+           ". Therefore you _must_ ensure this is in your vimrc:\n"
+           "let g:vimspector_base_dir='") + vimspector_base) + "'"))
 
 if succeeded:
   print( "Done" )
